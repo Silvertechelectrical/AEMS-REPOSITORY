@@ -1,0 +1,6 @@
+[
+  { "name": "John Otieno", "registrationNumber": "UON/CS/2026/001", "university": "University of Nairobi", "sport": "Football" },
+  { "name": "Grace Wanjiku", "registrationNumber": "KU/BS/2026/014", "university": "Kenyatta University", "sport": "Basketball" },
+  { "name": "David Kibet", "registrationNumber": "JKUAT/AT/2026/021", "university": "Jomo Kenyatta University", "sport": "Athletics" },
+  { "name": "Jane Achieng", "registrationNumber": "MOI/VT/2026/004", "university": "Moi University", "sport": "Volleyball" }
+]

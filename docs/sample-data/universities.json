@@ -1,0 +1,12 @@
+[
+  { "name": "University of Nairobi", "code": "UON", "location": "Nairobi" },
+  { "name": "Kenyatta University", "code": "KU", "location": "Nairobi" },
+  { "name": "Jomo Kenyatta University", "code": "JKUAT", "location": "Juja" },
+  { "name": "Egerton University", "code": "EGERTON", "location": "Njoro" },
+  { "name": "Moi University", "code": "MOI", "location": "Eldoret" },
+  { "name": "Maseno University", "code": "MASENO", "location": "Maseno" },
+  { "name": "Masinde Muliro University", "code": "MMU", "location": "Kakamega" },
+  { "name": "Laikipia University", "code": "LAIKIPIA", "location": "Nyahururu" },
+  { "name": "Kisii University", "code": "KSU", "location": "Kisii" },
+  { "name": "Machakos University", "code": "MACHAKOS", "location": "Machakos" }
+]

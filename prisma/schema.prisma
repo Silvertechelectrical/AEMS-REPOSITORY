@@ -1,0 +1,189 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUPER_ADMIN
+  KUSF_ADMIN
+  UNIVERSITY_ADMIN
+  SPORTS_OFFICER
+  TEAM_CAPTAIN
+  COACH
+  ATHLETE
+}
+
+enum EligibilityStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum DocumentStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+model User {
+  id           String         @id @default(uuid())
+  name         String
+  email        String         @unique
+  passwordHash String
+  role         Role
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  universityId String?
+  university   University? @relation(fields: [universityId], references: [id])
+
+  athlete           Athlete?
+  coachedTeams      Team[]        @relation("TeamCoach")
+  refreshTokens     RefreshToken[]
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model University {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String   @unique
+  location  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  adminUsers User[]
+  athletes   Athlete[]
+  teams      Team[]
+}
+
+model Sport {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  category  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  athletes Athlete[]
+  teams    Team[]
+}
+
+model Athlete {
+  id               String             @id @default(uuid())
+  userId           String             @unique
+  fullName         String
+  dateOfBirth      DateTime
+  gender           String
+  nationality      String
+  phone            String?
+  profilePhoto     String?
+  universityId     String
+  sportId          String
+  eligibilityStatus EligibilityStatus @default(PENDING)
+  verificationStatus VerificationStatus @default(PENDING)
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  university University @relation(fields: [universityId], references: [id])
+  sport      Sport      @relation(fields: [sportId], references: [id])
+
+  documents         Document[]
+  eligibilityRecords EligibilityRecord[]
+  teamLinks         TeamAthlete[]
+}
+
+model Team {
+  id          String   @id @default(uuid())
+  name        String
+  universityId String
+  sportId     String
+  coachId     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  university University @relation(fields: [universityId], references: [id])
+  sport      Sport      @relation(fields: [sportId], references: [id])
+  coach      User       @relation("TeamCoach", fields: [coachId], references: [id])
+
+  athletes   TeamAthlete[]
+  competitions CompetitionTeam[]
+}
+
+model TeamAthlete {
+  id        String   @id @default(uuid())
+  teamId    String
+  athleteId String
+  joinedAt  DateTime @default(now())
+
+  team    Team    @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+
+  @@unique([teamId, athleteId])
+}
+
+model Competition {
+  id          String   @id @default(uuid())
+  name        String
+  date        DateTime
+  location    String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  teams CompetitionTeam[]
+}
+
+model CompetitionTeam {
+  id            String @id @default(uuid())
+  competitionId String
+  teamId        String
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  team        Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([competitionId, teamId])
+}
+
+model EligibilityRecord {
+  id                  String             @id @default(uuid())
+  athleteId           String
+  academicStatus     String
+  verificationStatus  VerificationStatus @default(PENDING)
+  approvalHistory     Json?
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+}
+
+model Document {
+  id                String          @id @default(uuid())
+  athleteId         String
+  documentType      String
+  fileUrl           String
+  verificationStatus DocumentStatus @default(PENDING)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+}

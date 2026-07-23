@@ -1,0 +1,32 @@
+{
+  "name": "kusf-aems",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:web": "npm --workspace @kusf/web run dev",
+    "dev:api": "npm --workspace @kusf/api run dev",
+    "build": "npm run build:api && npm run build:web",
+    "build:web": "npm --workspace @kusf/web run build",
+    "build:api": "npm --workspace @kusf/api run build",
+    "lint": "npm --workspace @kusf/web run lint && npm --workspace @kusf/api run lint",
+    "test": "npm --workspace @kusf/api run test",
+    "prisma:generate": "npx prisma generate",
+    "prisma:migrate": "npx prisma migrate dev --name init",
+    "prisma:seed": "npx prisma db seed",
+    "prisma:studio": "npx prisma studio",
+    "db:up": "docker compose up -d postgres"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "esbuild": "^0.23.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  },
+  "overrides": {},
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  }
+}
