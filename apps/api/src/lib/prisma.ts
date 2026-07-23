@@ -8,31 +8,43 @@ import { Pool } from 'pg';
 const envPath = path.resolve(process.cwd(), '.env');
 config({ path: envPath });
 
-const normalizeDatabaseUrl = (url: string) => {
-  if (url.includes('sslmode=') || url.includes('sslaccept=')) {
-    return url;
+const DEFAULT_LOCAL_DATABASE_URL = 'postgresql://postgres:postgres@localhost:5432/kusf_aems?schema=public';
+
+const normalizeDatabaseUrl = (url?: string) => {
+  const safeUrl = url?.trim();
+
+  if (!safeUrl) {
+    return DEFAULT_LOCAL_DATABASE_URL;
   }
 
-  const separator = url.includes('?') ? '&' : '?';
-  return `${url}${separator}sslmode=require&sslaccept=accept_invalid_certs`;
+  if (safeUrl.includes('localhost') || safeUrl.includes('127.0.0.1')) {
+    return safeUrl;
+  }
+
+  if (safeUrl.includes('sslmode=') || safeUrl.includes('sslaccept=')) {
+    return safeUrl;
+  }
+
+  const separator = safeUrl.includes('?') ? '&' : '?';
+  return `${safeUrl}${separator}sslmode=require&sslaccept=accept_invalid_certs`;
 };
 
-const databaseUrl = normalizeDatabaseUrl(process.env.DATABASE_URL ?? 'postgresql://postgres:postgres@localhost:5432/kusf_aems?schema=public');
+const databaseUrl = normalizeDatabaseUrl(process.env.DATABASE_URL ?? DEFAULT_LOCAL_DATABASE_URL);
 const directUrl = normalizeDatabaseUrl(process.env.DIRECT_URL ?? databaseUrl);
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 process.env.DATABASE_URL = databaseUrl;
 process.env.DIRECT_URL = directUrl;
 
-if (process.env.NODE_ENV !== 'production' && databaseUrl.includes('sslaccept=accept_invalid_certs')) {
+if (databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1')) {
+  delete process.env.NODE_TLS_REJECT_UNAUTHORIZED;
+} else if (process.env.NODE_ENV !== 'production' && databaseUrl.includes('sslaccept=accept_invalid_certs')) {
   process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
 }
 
 const pool = new Pool({
   connectionString: databaseUrl,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  ssl: databaseUrl.includes('localhost') || databaseUrl.includes('127.0.0.1') ? false : { rejectUnauthorized: false },
 });
 const adapter = new PrismaPg(pool);
 

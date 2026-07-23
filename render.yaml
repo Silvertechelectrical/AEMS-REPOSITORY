@@ -32,7 +32,7 @@ services:
         fromEnv: SUPABASE_SERVICE_ROLE_KEY
       - key: WEB_URL
         value: https://your-vercel-app-url.vercel.app
-      - key: APP_URL
-        value: https://your-vercel-app-url.vercel.app
       - key: CORS_ORIGINS
         value: http://localhost:3000,http://127.0.0.1:3000,https://silvertechelectrical.github.io
+      - key: APP_URL
+        value: https://your-vercel-app-url.vercel.app

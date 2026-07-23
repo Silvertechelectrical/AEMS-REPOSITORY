@@ -27,6 +27,17 @@ npm run dev:web    # Frontend on http://localhost:3000
 npm run dev:api    # Backend on http://localhost:4000/api/v1
 ```
 
+To run the frontend locally while using the deployed API, create
+`apps/web/.env.local` with:
+
+```env
+NEXT_PUBLIC_API_URL=https://kusf-aems-api.onrender.com/api/v1
+```
+
+The deployed API must have `CORS_ORIGINS` set to the URL where the local or
+deployed frontend is served, as a comma-separated list. Localhost is allowed
+by default.
+
 Full stack with Docker:
 ```bash
 docker-compose up --build
@@ -34,9 +45,15 @@ docker-compose up --build
 
 ## Environment setup
 
-C
+Copy `.env.example` to `.env` and configure:
+- `DATABASE_URL` — PostgreSQL connection
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — Supabase verification (optional)
+- `NEXT_PUBLIC_API_URL` — API endpoint for frontend
+- `JWT_SECRET` — Token signing key
+
 ## Demo credentials
 
-
+- Email: `sports.officer@dkut.ac.ke`
+- Password: `Admin@123`
 
 Or use `/captains`, `/staff`, `/nominate`, `/qr` routes in the admin dashboard.
