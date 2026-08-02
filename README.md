@@ -34,15 +34,9 @@ docker-compose up --build
 
 ## Environment setup
 
-Copy `.env.example` to `.env` and configure:
-- `DATABASE_URL` — PostgreSQL connection
-- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` — Supabase verification (optional)
-- `NEXT_PUBLIC_API_URL` — API endpoint for frontend
-- `JWT_SECRET` — Token signing key
-
+C
 ## Demo credentials
 
-- Email: `sports.officer@dkut.ac.ke`
-- Password: `Admin@123`
+
 
 Or use `/captains`, `/staff`, `/nominate`, `/qr` routes in the admin dashboard.
