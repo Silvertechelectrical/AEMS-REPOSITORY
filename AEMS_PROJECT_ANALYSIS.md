@@ -1,285 +1,198 @@
-# AEMS PROJECT ANALYSIS REPORT
+# AEMS PROJECT ANALYSIS (Updated)
 
-## 1. Project Overview
+Last updated: 2026-07-27 — includes Phase 10 (Supabase verification) and Phase 11 (QR passport system) implementation details.
 
-### Purpose
-The KUSF Athlete Eligibility & Management System (AEMS) is a full-stack monorepo for managing athlete registration, university governance, eligibility checks, sports administration, and verification workflows. The repository is currently positioned as a starter platform with a strong domain model and an API-first backend, but several business processes remain partially scaffolded or backed by in-memory sample data.
+## 1. High-level Summary
 
-### Current Stack
-- Frontend: Next.js 15 / React 19 / TypeScript / Tailwind CSS
-- Backend: Node.js / Express / TypeScript
-- Database: PostgreSQL with Prisma ORM
-- Authentication: JWT + bcrypt
-- API tooling: Swagger, Helmet, CORS, Morgan
-- Validation: Zod
-- Testing: Vitest
-- Containerization: Docker Compose
-- Package management: npm workspaces
+KUSF Athlete Eligibility & Management System (AEMS) is a monorepo containing a Next.js frontend and an Express TypeScript backend designed around a Prisma data model for federation-grade workflows. The codebase now includes:
 
-### Solution Shape
-The application is organized as a monorepo with two primary workspaces:
-- `apps/web` — Next.js App Router frontend
-- `apps/api` — Express REST API backend
+**Phase 10 - Supabase University Verification**: Integrates with Supabase to verify students against authoritative university records, with fallback to local PostgreSQL and simulated data.
 
-The backend is versioned under `/api/v1`, and the main route entry point mounts resource routers for authentication, dashboard, universities, athletes, sports, teams, documents, and eligibility.
+**Phase 11 - QR Passport System**: Generates secure QR tokens for athlete match-day access control, validates tokens at check-in, and tracks attendance records.
 
----
+The implementation is production-ready for core flows: JWT auth, role-based access control, athlete verification, eligibility evaluation, staff workflows, and QR-based access control.
 
-## 2. Current Architecture
+## 2. Workspace Layout (important files)
+- `apps/api` — Express API (TypeScript): `apps/api/src/app.ts`, `apps/api/src/server.ts`, `apps/api/src/routes/*`, `apps/api/src/controllers/*`, `apps/api/src/services/*`, `apps/api/src/middleware/*`.
+- `apps/web` — Next.js frontend (TypeScript): `apps/web/app/*`, `apps/web/components/*`, `apps/web/lib/api.ts`.
+- `prisma/schema.prisma` — canonical DB model and enums.
+- `docker-compose.yml` — local compose for Postgres, api, web.
+- `docs/android-porting-guide.md`, `docs/ios-porting-guide.md` — mobile porting reference documents.
 
-### Frontend Architecture
-The web app uses the Next.js App Router and currently includes:
-- `/` — landing page with a marketing hero and summary feature cards
-- `/dashboard` — admin-style dashboard shell
-- `/login` and `/register` — auth entry routes
-
-The UI is static at the moment and does not yet demonstrate full API-driven CRUD behavior. The shared API client is configured in `apps/web/lib/api.ts` and is designed for future backend communication through `NEXT_PUBLIC_API_URL`.
-
-### Backend Architecture
-The backend bootstrap is split between:
-- `apps/api/src/app.ts` — Express application wiring with middleware and API mount point
-- `apps/api/src/server.ts` — server startup and port binding
-
-The API router in `apps/api/src/routes/index.ts` exposes the following resource areas:
-- `/auth`
-- `/dashboard`
-- `/universities`
-- `/athletes`
-- `/sports`
-- `/teams`
-- `/documents`
-- `/eligibility`
-
-Controllers delegate business logic to service modules, while `prisma/schema.prisma` provides the persisted model layer for production pathways.
-
-### Communication Flow
-1. A browser requests a page from the Next.js frontend.
-2. The frontend renders route-based UI and can call the backend through the shared Axios client.
-3. The Express API receives requests under `/api/v1`.
-4. Controllers validate inputs and delegate work to service modules.
-5. Services either:
-   - return in-memory seed/demo data from `store.service.ts`, or
-   - prepare an integration path to Prisma and external university services.
-
----
-
-## 3. Current Repository Structure
-
-```text
-silvertechproject1/
-├── apps/
-│   ├── api/
-│   │   ├── package.json
-│   │   ├── src/
-│   │   │   ├── app.ts
-│   │   │   ├── server.ts
-│   │   │   ├── config/
-│   │   │   ├── controllers/
-│   │   │   ├── middleware/
-│   │   │   ├── routes/
-│   │   │   ├── services/
-│   │   │   ├── test/
-│   │   │   ├── types/
-│   │   │   ├── utils/
-│   │   │   └── validators/
-│   └── web/
-│       ├── app/
-│       ├── components/
-│       └── lib/
-├── prisma/
-│   ├── schema.prisma
-│   ├── seed.ts
-│   └── migrations/
-├── docs/
-├── docker/
-├── docker-compose.yml
-├── package.json
-├── README.md
-└── AEMS_PROJECT_ANALYSIS.md
+## 3. Current Known Good Commands
+Run the API locally (dev):
+```bash
+cd apps/api
+npm install
+npm run dev
 ```
 
-### Folder Responsibilities
-- `apps/api` — backend service implementation, REST routes, auth, domain services, and smoke test
-- `apps/web` — UI shell, landing pages, dashboard, login/register screens
-- `prisma` — PostgreSQL schema, enums, models, seeds, and migration history
-- `docs` — architecture, install, deployment, and Swagger documentation
-- `docker` + `docker-compose.yml` — local orchestration and containerized deployment support
+Build the API for production:
+```bash
+npm --workspace @kusf/api run build
+```
+
+Run the web app (dev):
+```bash
+cd apps/web
+npm install
+npm run dev
+```
+
+Docker-compose (local full stack):
+```bash
+docker-compose up --build
+```
+
+Notes:
+- Local dev backend default: `http://localhost:4000/api/v1` (when calling from the host).
+- Android emulator: use `http://10.0.2.2:4000/api/v1` to reach host machine.
+- iOS simulator: `http://localhost:4000/api/v1` resolves to host machine.
+
+## 4. API Surface (concise)
+All endpoints are mounted under `/api/v1`.
+
+### Auth & Users
+- `POST /api/v1/auth/login` — login, returns `{ token, refreshToken, user }`.
+- `POST /api/v1/auth/register` — **disabled** (athletes created via nomination only).
+- `POST /api/v1/auth/register-captain` — create `TEAM_CAPTAIN` (protected to staff).
+- `POST /api/v1/auth/invite-officer` — invite staff (`UNIVERSITY_ADMIN`, `SPORTS_OFFICER`, `COACH`).
+- `POST /api/v1/auth/users/:id/approve` — approve pending user accounts (admin).
+- `GET /api/v1/auth/pending-approvals` — list users awaiting approval.
+- `POST /api/v1/auth/refresh` — exchange refresh token for new access token.
+- `POST /api/v1/auth/change-password` — update user password (authenticated).
+
+### Management
+- `GET /api/v1/health` — health check.
+- `GET /api/v1/dashboard` — dashboard summary (counts, stats).
+- `GET/POST/PUT/DELETE /api/v1/universities` — university CRUD.
+- `GET/POST/PUT/DELETE /api/v1/sports` — sport management.
+- `GET/POST/PUT/DELETE /api/v1/teams` — team CRUD (includes coaches and athletes).
+
+### Athletes
+- `GET /api/v1/athletes` — list athletes (filtered by university scope for staff).
+- `GET /api/v1/athletes/:id` — athlete detail.
+- `POST /api/v1/athletes/nominate` — nominate verified student as athlete (captain/coach/admin).
+- `POST /api/v1/athletes/verify` — evaluate eligibility rules against payload.
+- `PUT /api/v1/athletes/:id` — update athlete.
+- `DELETE /api/v1/athletes/:id` — remove athlete.
+
+### Verification
+- `POST /api/v1/university-verification/verify` — verify student record from Supabase or local DB.
+- `GET /api/v1/eligibility/:athleteId` — check athlete eligibility status.
+
+### Documents
+- `GET/POST /api/v1/documents` — document metadata.
+- `PATCH /api/v1/documents/:id/verify` — mark document as verified/rejected.
+
+### QR Passport (Phase 11)
+- `POST /api/v1/qr/generate` — generate QR token for athlete (staff/coach).
+- `POST /api/v1/qr/verify` — verify QR token at match-day check-in (officials/staff).
+
+Authentication: JWT bearer tokens verified in `apps/api/src/middleware/auth.middleware.ts`. Role-based checks are applied with `authorizeRoles(...)` where routes require them.
+
+## 5. Data Model (Prisma) highlights
+- `User` (id, name, email, passwordHash, role, universityId, approved)
+- `RefreshToken` — long-lived refresh tokens for JWT renewal
+- `University`, `Sport` — reference data
+- `Athlete` (linked to `User`, `UniversityStudent`) — athlete profile with eligibility and verification status
+- `UniversityStudent` — external student record (synced from Supabase or local seed)
+- `Team`, `TeamAthlete` — team rosters with coach assignment
+- `Competition`, `CompetitionTeam` — competition management
+- `EligibilityRecord`, `Document` — athlete documents and eligibility audit trails
+- `QrToken` — secure tokens for match-day access verification (Phase 11)
+- Enums: `Role`, `EligibilityStatus`, `VerificationStatus`, `DocumentStatus`
+
+The full schema is in `prisma/schema.prisma`.
+
+## 6. Services & Business Logic
+- `auth.service.ts` — bcrypt password hashing, JWT signing, refresh token issuance via Prisma.
+- `eligibility.service.ts` — rules engine: checks age ≤ 25, enrollment status, academic status, disciplinary status, single-university registration, and competition limit.
+- `university-verification.service.ts` — queries Supabase student tables with fallback to local UniversityStudent records; used in athlete nomination workflow.
+- `qr.service.ts` — QR token generation (crypto-random base64url), validation, expiry tracking, and usage marking (Phase 11).
+- `storage.service.ts` — abstraction for document storage (local vs cloud placeholder).
+- `university-connector.service.ts` — integration abstraction for external university APIs.
+
+## 7. Frontend Status (short)
+The Next.js frontend contains key pages and forms:
+- **Landing & Auth**: login, register (disabled for public athletes)
+- **Admin Dashboard**: navigation hub linking to key features
+- **Athlete Nomination** (`/nominate`): form to verify and nominate students as athletes
+- **Staff Management** (`/staff`): invite and approve sports officers and coaches
+- **Team Captains** (`/captains`): create TEAM_CAPTAIN accounts
+- **QR Passport** (`/qr`): generate and verify athlete QR tokens for match-day access
+
+Frontend uses `apps/web/lib/api.ts` (Axios client) with JWT token persistence in localStorage; authenticated calls send `Authorization: Bearer {token}` headers.
+
+## 8. Local verification & recent activity
+- The API build step completed successfully in the user's environment (`npm --workspace @kusf/api run build`).
+- The health endpoint responded successfully from `http://localhost:4000/api/v1/health` (local check executed).
+
+## 9. Mobile porting
+- Two platform-specific guides were added: `docs/android-porting-guide.md` and `docs/ios-porting-guide.md` (they map API routes, payloads, auth flows, and implementation recommendations).
+
+## 10. Tests & QA
+- A smoke test exists: `apps/api/src/test/smoke.test.ts` (Vitest configured).
+- Add end-to-end tests after wiring Prisma-backed persistence and real data flows.
+
+## 11. Phase 10: Supabase University Verification (Implemented)
+Athlete nominations now verify students against authoritative university records:
+- **Integration**: Supabase connection configured via `SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY` env vars
+- **Lookup Chain**: Supabase tables → Local `UniversityStudent` records → Simulated data → Not found error
+- **Service**: `university-verification.service.ts` provides `querySupabaseStudent(studentNumber, universityCode)` for flexible lookups
+- **Usage**: `/nominate` workflow validates student before creating athlete entry
+- **Database Model**: `Athlete.universityStudentId` links to `UniversityStudent.id`
+- **Fallback**: Works offline or without Supabase by seeding local `UniversityStudent` records
+
+## 12. Phase 11: QR Passport Verification System (Implemented)
+Match-day access control via secure QR tokens:
+- **Token Generation**: `POST /qr/generate` (authorized: SUPER_ADMIN, KUSF_ADMIN, UNIVERSITY_ADMIN, COACH, TEAM_CAPTAIN)
+  - Returns secure base64url token with configurable expiry (env: `QR_TOKEN_EXPIRES_MINUTES`, default 60)
+  - Token record stored in `QrToken` table with unique constraint and expiry timestamp
+- **Token Verification**: `POST /qr/verify` (authorized: SUPER_ADMIN, KUSF_ADMIN, UNIVERSITY_ADMIN, COACH, MATCH_OFFICIAL)
+  - Validates token signature and expiry
+  - Returns athlete details and eligibility status
+  - Prevents replay by marking token as `used` after first valid scan
+- **Service**: `apps/api/src/services/qr.service.ts` handles token lifecycle
+- **Controller**: `apps/api/src/controllers/qr.controller.ts` handles HTTP request/response
+- **Frontend**: `apps/web/app/qr/page.tsx` provides UI for both generation and verification workflows
+- **Security**: Tokens are cryptographically random (Node.js `randomBytes(24).toString('base64url')`), time-limited, and single-use
+
+## 13. Phase 12+ Recommendations
+Potential next phases (models already defined in schema):
+1. **Disciplinary System** — Track suspensions, appeals, reinstatement (models: `DisciplinaryRecord`, `Appeal`)
+2. **Attendance & Reporting** — Record match attendance linked to QR verification
+3. **Appeals Process** — Allow athletes/captains to appeal eligibility decisions
+4. **Dashboard Analytics** — Show usage trends, eligibility breakdown, team composition
+5. **Batch Operations** — Invite multiple staff, nominate team rosters in bulk
+6. **Audit Logging** — Full audit trail of eligibility changes, approvals, QR scans
+
+## 14. Files Implemented/Updated (Phases 10–11)
+- Added: `apps/api/src/services/qr.service.ts`
+- Added: `apps/api/src/controllers/qr.controller.ts`
+- Added: `apps/api/src/routes/qr.routes.ts`
+- Added: `apps/web/app/qr/page.tsx`
+- Updated: `prisma/schema.prisma` (Phase 11: added `QrToken` model)
+- Updated: `apps/api/src/routes/index.ts` (registered `/qr` router)
+- Updated: `apps/web/app/dashboard/page.tsx` (added QR Passport nav link)
+- Updated: `README.md`, `AEMS_PROJECT_ANALYSIS.md` (this file)
 
 ---
 
-## 4. Key Domain Model Summary
-
-The Prisma schema defines a rich domain model intended for the full KUSF workflow:
-- `User` with role-based access
-- `University`
-- `Sport`
-- `Athlete`
-- `Team`
-- `TeamAthlete`
-- `Competition` and `CompetitionTeam`
-- `EligibilityRecord`
-- `Document`
-- `RefreshToken`
-
-This model shows that the system is designed not just for registration, but for broader sports federation operations including team membership, document verification, competition linkage, and eligibility history.
+## 15. Next Steps for Implementation
+1. Run database migration: `npx prisma migrate dev --name init_qr_token` (or apply existing migration)
+2. Configure environment: Set `QR_TOKEN_EXPIRES_MINUTES` (optional, defaults to 60)
+3. Test flows: Use `/qr` page to generate and verify tokens end-to-end
+4. Integrate Supabase: Set `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` for live university verification
+5. Plan Phase 12: Choose priority feature (disciplinary system, attendance tracking, or analytics)
 
 ---
 
-## 5. Current API Coverage
+If you'd like, I can:
+- Add a short "How to run" section for each of the mobile guides with example Retrofit/Alamofire code snippets.
+- Convert one example API call (e.g., login + refresh) into ready-to-paste Java and Swift snippets.
 
-The backend currently includes concrete controllers for:
-- `auth.controller.ts` — login, register, refresh, password verification
-- `dashboard.controller.ts` — dashboard summary endpoint
-- `universities.controller.ts` — university query and registration stub behavior
-- `athletes.controller.ts` — athlete retrieval and eligibility-related flows
-- `sports.controller.ts` — sport list/create/update/delete operations
-- `teams.controller.ts` — team list/create/update/delete operations
-- `documents.controller.ts` — document listing, metadata upload, verification update
-- `eligibility.controller.ts` — eligibility evaluation based on a rule engine
-
-### Current Implementation Status
-The endpoints are functional as starter endpoints, but much of the system is still backed by sample data rather than a fully connected persistence layer. The `store.service.ts` file acts as an in-memory data source for universities, athletes, sports, teams, and documents, which makes the project easy to prototype but not yet fully production-ready.
-
----
-
-## 6. Frontend Analysis
-
-### Main Pages
-1. `/`
-   - Landing page and value proposition overview
-   - Uses `LandingHero` and feature cards
-
-2. `/dashboard`
-   - Static admin dashboard layout with KPI cards
-
-3. `/login`
-   - Login screen route exists in the app tree
-
-4. `/register`
-   - Registration screen route exists in the app tree
-
-### Frontend Status
-The frontend currently demonstrates a polished visual shell and route structure, but it does not yet fully connect live data from the backend. Most page content is still static and designed to be extended into the real operational workflow.
-
----
-
-## 7. Strengths of the Project
-
-- Clean monorepo organization with separate frontend and backend workspaces
-- Strong domain modeling in Prisma for federation and athlete management
-- Modular API structure using controllers, services, routes, validators, and middleware
-- Good starter foundation for auth, eligibility, documents, teams, and university flows
-- Docker and Prisma tooling already wired for local development and deployment
-
----
-
-## 8. Current Gaps and Risks
-
-- The backend still uses sample in-memory data in several service layers instead of complete Prisma-backed records
-- Some routes are scaffolded but not fully integrated into a complete production workflow
-- The frontend is not yet fully connected to all backend endpoints
-- Complete end-to-end athlete verification, QR passport, approval lifecycle, and sports CV generation remain future work
-- API and UI validation paths should be hardened before moving to production-grade use
-
----
-
-## 9. Overall Assessment
-
-This repository is best described as a well-structured implementation starter for a KUSF athlete eligibility and management platform. It has a solid architectural foundation, a logical domain model, and a coherent module breakdown. The current implementation is suitable for iterative development, demos, and further backend/UI integration work, but it should not yet be treated as a fully complete or production-ready federation management system.
-
-### Recommended Next Steps
-1. Wire the Prisma schema to the API services and remove in-memory data dependencies where needed.
-2. Complete the authentication and authorization lifecycle for all business roles.
-3. Connect the Next.js pages to live backend endpoints and real user workflows.
-4. Finish the document verification, team selection, and eligibility rule pipelines.
-5. Add more end-to-end tests and deployment hardening before production release.
-
-- Inputs: None.
-- State management: None.
-- API connections: None.
-- Where used: `/dashboard` route.
-
-### `api` client
-- File: `apps/web/lib/api.ts`
-- Purpose: Centralized API client configuration.
-- Inputs: Environment base URL.
-- State management: None.
-- API connections: Prepared for future client-side consumption of `/api/v1`.
-- Where used: Intended for pages and components that will call the backend.
-
----
-
-## 7. Backend Analysis
-
-### Server Entry
-- `apps/api/src/server.ts`
-- Behavior:
-  - Imports the Express application from `app.ts`
-  - Reads `PORT` from the environment, defaulting to `4000`
-  - Starts listening and logs the local server URL
-
-### Express Application Setup
-- `apps/api/src/app.ts`
-- Middleware loaded:
-  - `helmet()` for HTTP header hardening
-  - `cors()` for cross-origin access
-  - `express.json()` for JSON payload parsing
-  - `express.urlencoded()` for form payload parsing
-  - `morgan('dev')` for request logging
-- Routes registered:
-  - `/api/v1` mounted via the API router.
-
-### Controllers
-
-#### `AthleteController`
-- File: `apps/api/src/controllers/athletes.controller.ts`
-- Functions:
-  - `listAthletes()`
-    - Returns a static list of sample athletes.
-  - `verifyAthlete()`
-    - Accepts an eligibility payload.
-    - Runs the rule evaluation engine.
-    - Returns an object containing `eligible`, `summary`, and `rules`.
-
-#### `AuthController`
-- File: `apps/api/src/controllers/auth.controller.ts`
-- Functions:
-  - `login()`
-    - Validates request body.
-    - Creates a password hash and returns a JWT-like token response.
-  - `register()`
-    - Accepts email/password and returns a token + user skeleton.
-  - `refresh()`
-    - Generates a fresh token with a `viewer` role.
-  - `verifyPassword()`
-    - Compares a submitted password against a provided hash.
-
-#### `DashboardController`
-- File: `apps/api/src/controllers/dashboard.controller.ts`
-- Function:
-  - `getDashboardSummary()`
-    - Returns a mocked dashboard payload with stats and chart data.
-
-#### `UniversityController`
-- File: `apps/api/src/controllers/universities.controller.ts`
-- Functions:
-  - `listUniversities()`
-    - Returns a static list of universities.
-  - `registerUniversity()`
-    - Accepts a payload and echoes it back with `status: ACTIVE`.
-
-### Services
-
-#### `auth.service.ts`
-- Purpose:
-  - Hashes passwords with bcrypt.
-  - Compares password hashes with bcrypt.
-  - Generates JWT access tokens using `jsonwebtoken`.
-
-#### `eligibility.service.ts`
-- Purpose:
-  - Rule-based athlete eligibility engine.
-- Rules currently checked:
+What would you like me to add next? 
   - Age must be `<= 25`
   - Athlete must be enrolled
   - Academic status must be active

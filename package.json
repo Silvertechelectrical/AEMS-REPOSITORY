@@ -8,6 +8,8 @@
   "scripts": {
     "dev:web": "npm --workspace @kusf/web run dev",
     "dev:api": "npm --workspace @kusf/api run dev",
+    "start:web": "npm --workspace @kusf/web run start",
+    "start:api": "npm --workspace @kusf/api run start",
     "build": "npm run build:api && npm run build:web",
     "build:web": "npm --workspace @kusf/web run build",
     "build:api": "npm --workspace @kusf/api run build",
@@ -28,5 +30,10 @@
   "overrides": {},
   "prisma": {
     "seed": "tsx prisma/seed.ts"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.9.1",
+    "@types/pg": "^8.20.0",
+    "pg": "^8.22.0"
   }
 }

@@ -1,0 +1,36 @@
+services:
+  - type: web
+    name: kusf-aems-api
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npm --workspace @kusf/api run build
+    startCommand: npm --workspace @kusf/api run start
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        fromEnv: DATABASE_URL
+      - key: DIRECT_URL
+        fromEnv: DIRECT_URL
+      - key: JWT_SECRET
+        fromEnv: JWT_SECRET
+      - key: JWT_EXPIRES_IN
+        value: 1h
+      - key: REFRESH_TOKEN_SECRET
+        fromEnv: REFRESH_TOKEN_SECRET
+      - key: NEXT_PUBLIC_API_URL
+        value: https://kusf-aems-api.onrender.com/api/v1
+      - key: NEXT_PUBLIC_SUPABASE_URL
+        fromEnv: NEXT_PUBLIC_SUPABASE_URL
+      - key: NEXT_PUBLIC_SUPABASE_ANON_KEY
+        fromEnv: NEXT_PUBLIC_SUPABASE_ANON_KEY
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        fromEnv: SUPABASE_SERVICE_ROLE_KEY
+      - key: WEB_URL
+        value: https://your-vercel-app-url.vercel.app
+      - key: APP_URL
+        value: https://your-vercel-app-url.vercel.app

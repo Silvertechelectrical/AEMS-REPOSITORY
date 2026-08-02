@@ -14,6 +14,9 @@ enum Role {
   TEAM_CAPTAIN
   COACH
   ATHLETE
+  MATCH_OFFICIAL
+  REFEREE
+  VIEWER
 }
 
 enum EligibilityStatus {
@@ -35,12 +38,25 @@ enum DocumentStatus {
   REJECTED
 }
 
+enum NotificationType {
+  INFO
+  WARNING
+  ACTION_REQUIRED
+}
+
+enum ReportStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
 model User {
   id           String         @id @default(uuid())
   name         String
   email        String         @unique
   passwordHash String
   role         Role
+  approved     Boolean        @default(false)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
 
@@ -50,6 +66,9 @@ model User {
   athlete           Athlete?
   coachedTeams      Team[]        @relation("TeamCoach")
   refreshTokens     RefreshToken[]
+  notifications     Notification[]
+  auditLogs         AuditLog[]
+  reports           Report[]
 }
 
 model RefreshToken {
@@ -63,6 +82,47 @@ model RefreshToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model Notification {
+  id         String           @id @default(uuid())
+  userId     String
+  title      String
+  message    String
+  type       NotificationType @default(INFO)
+  readAt     DateTime?
+  metadata   Json?
+  createdAt  DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  userId       String
+  action       String
+  resourceType String
+  resourceId   String?
+  ipAddress    String?
+  userAgent    String?
+  metadata     Json?
+  createdAt    DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Report {
+  id          String       @id @default(uuid())
+  name        String
+  type        String
+  generatedBy String
+  filters     Json?
+  result      Json?
+  status      ReportStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  user User @relation(fields: [generatedBy], references: [id], onDelete: Cascade)
+}
+
 model University {
   id        String   @id @default(uuid())
   name      String   @unique
@@ -74,6 +134,8 @@ model University {
   adminUsers User[]
   athletes   Athlete[]
   teams      Team[]
+  students   UniversityStudent[]
+  disciplinaryCases DisciplinaryCase[]
 }
 
 model Sport {
@@ -90,6 +152,7 @@ model Sport {
 model Athlete {
   id               String             @id @default(uuid())
   userId           String             @unique
+  universityStudentId String? @map("university_student_id")
   fullName         String
   dateOfBirth      DateTime
   gender           String
@@ -108,6 +171,12 @@ model Athlete {
   university University @relation(fields: [universityId], references: [id])
   sport      Sport      @relation(fields: [sportId], references: [id])
 
+  universityStudent UniversityStudent? @relation(fields: [universityStudentId], references: [id])
+
+  qrTokens          QrToken[]
+  attendanceRecords AttendanceRecord[]
+  disciplinaryCases DisciplinaryCase[]
+  appeals           Appeal[]
   documents         Document[]
   eligibilityRecords EligibilityRecord[]
   teamLinks         TeamAthlete[]
@@ -128,6 +197,7 @@ model Team {
 
   athletes   TeamAthlete[]
   competitions CompetitionTeam[]
+  results    CompetitionResult[]
 }
 
 model TeamAthlete {
@@ -151,12 +221,30 @@ model Competition {
   updatedAt   DateTime @updatedAt
 
   teams CompetitionTeam[]
+  results CompetitionResult[]
 }
 
 model CompetitionTeam {
   id            String @id @default(uuid())
   competitionId String
   teamId        String
+
+  competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
+  team        Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([competitionId, teamId])
+}
+
+model CompetitionResult {
+  id            String      @id @default(uuid())
+  competitionId String
+  teamId        String
+  result        String
+  position      Int?
+  score         Int?
+  notes         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   competition Competition @relation(fields: [competitionId], references: [id], onDelete: Cascade)
   team        Team        @relation(fields: [teamId], references: [id], onDelete: Cascade)
@@ -186,4 +274,101 @@ model Document {
   updatedAt         DateTime        @updatedAt
 
   athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+}
+
+model QrToken {
+  id         String   @id @default(uuid())
+  athleteId  String
+  token      String   @unique
+  expiresAt  DateTime
+  usedAt     DateTime?
+  createdAt  DateTime @default(now())
+
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  attendanceRecords AttendanceRecord[]
+}
+
+model AttendanceRecord {
+  id         String   @id @default(uuid())
+  athleteId  String
+  qrTokenId  String
+  eventType  String   @default("MATCH_CHECKIN")
+  status     String   @default("PRESENT")
+  location   String?
+  createdAt  DateTime @default(now())
+
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  qrToken QrToken @relation(fields: [qrTokenId], references: [id], onDelete: Cascade)
+}
+
+enum DisciplinaryStatus {
+  OPEN
+  UNDER_REVIEW
+  CLOSED
+}
+
+enum AppealStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model DisciplinaryCase {
+  id               String             @id @default(uuid())
+  athleteId        String
+  universityId     String
+  offense          String
+  description      String
+  incidentDate     DateTime
+  status           DisciplinaryStatus @default(OPEN)
+  decision         String?
+  banPeriodDays    Int?
+  banStartDate     DateTime?
+  banEndDate       DateTime?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+  university University @relation(fields: [universityId], references: [id])
+  appeals Appeal[]
+}
+
+model Appeal {
+  id                 String        @id @default(uuid())
+  disciplinaryCaseId String
+  athleteId          String
+  requestDetails     String
+  status             AppealStatus  @default(PENDING)
+  reviewedBy         String?
+  reviewedAt         DateTime?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  disciplinaryCase DisciplinaryCase @relation(fields: [disciplinaryCaseId], references: [id], onDelete: Cascade)
+  athlete Athlete @relation(fields: [athleteId], references: [id], onDelete: Cascade)
+}
+
+model UniversityStudent {
+  id                     String   @id @default(uuid())
+  universityId           String
+  university             University @relation(fields: [universityId], references: [id])
+  universityStudentId    String   @unique
+  registrationNumber     String
+  fullName               String
+  dateOfBirth            DateTime
+  gender                 String?
+  photoUrl               String?
+  admissionDate          DateTime?
+  expectedGraduationDate DateTime?
+  actualGraduationDate   DateTime?
+  enrollmentStatus       String
+  academicStatus         String
+  graduationStatus       String
+  suspensionStatus       String
+  expulsionStatus        String
+  disciplinaryStatus     String
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  athletes Athlete[]
 }
