@@ -8,7 +8,16 @@ import { apiRouter } from './routes/index.js';
 config();
 
 const app = express();
-const allowedOrigins = [process.env.WEB_URL, 'http://localhost:3000', 'http://127.0.0.1:3000']
+const configuredOrigins = (process.env.CORS_ORIGINS ?? '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowedOrigins = [
+  process.env.WEB_URL,
+  ...configuredOrigins,
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+]
   .filter((origin): origin is string => Boolean(origin));
 
 app.use(helmet());

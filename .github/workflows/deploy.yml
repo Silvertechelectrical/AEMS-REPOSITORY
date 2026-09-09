@@ -33,6 +33,7 @@ jobs:
       - name: Build web app
         env:
           NEXT_PUBLIC_BASE_PATH: /AEMS-REPOSITORY
+          NEXT_PUBLIC_API_URL: https://kusf-aems-api.onrender.com/api/v1
         run: npm run build:web
 
       - name: Upload artifact
