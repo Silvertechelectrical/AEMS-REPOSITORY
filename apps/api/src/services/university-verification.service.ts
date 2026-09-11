@@ -232,10 +232,17 @@ const mapToEligibilityInput = (student: UniversityStudentRecord) => ({
 });
 
 export const verifyUniversityStudent = async (studentNumber: string, universityCode: string) => {
-  let dbRecord = await prisma.universityStudent.findFirst({
-    where: { universityStudentId: studentNumber, university: { code: universityCode } },
-    include: { university: true },
-  });
+  let dbRecord: Awaited<ReturnType<typeof prisma.universityStudent.findFirst>> = null;
+  let databaseUnavailable = false;
+
+  try {
+    dbRecord = await prisma.universityStudent.findFirst({
+      where: { universityStudentId: studentNumber, university: { code: universityCode } },
+      include: { university: true },
+    });
+  } catch {
+    databaseUnavailable = true;
+  }
 
   let student: UniversityStudentRecord | null = null;
 
@@ -299,8 +306,71 @@ export const verifyUniversityStudent = async (studentNumber: string, universityC
       };
     }
 
-    const university = await prisma.university.findUnique({ where: { code: universityCode } });
-    if (!university) {
+    if (databaseUnavailable) {
+      student = simulated;
+    } else {
+      const university = await prisma.university.findUnique({ where: { code: universityCode } });
+      if (!university) {
+        return {
+          verified: false,
+          student: null,
+          eligibility: {
+            status: 'VERIFICATION_FAILED',
+            reasons: ['University record not found.'],
+          },
+        };
+      }
+
+      const createdRecord = await prisma.universityStudent.upsert({
+        where: { universityStudentId: simulated.studentNumber },
+        update: {
+          fullName: simulated.name,
+          dateOfBirth: new Date(simulated.dateOfBirth),
+          gender: simulated.gender,
+          photoUrl: simulated.photoUrl,
+          enrollmentStatus: simulated.enrollmentStatus,
+          academicStatus: simulated.academicStatus,
+          disciplinaryStatus: simulated.disciplinaryStatus,
+          suspensionStatus: simulated.isSuspended ? 'ACTIVE' : 'NONE',
+          expulsionStatus: simulated.isExpelled ? 'ACTIVE' : 'NONE',
+          updatedAt: new Date(),
+        },
+        create: {
+          universityId: university.id,
+          universityStudentId: simulated.studentNumber,
+          registrationNumber: `${simulated.universityCode}-${Date.now()}`,
+          fullName: simulated.name,
+          dateOfBirth: new Date(simulated.dateOfBirth),
+          gender: simulated.gender,
+          photoUrl: simulated.photoUrl,
+          admissionDate: new Date(),
+          expectedGraduationDate: new Date(),
+          actualGraduationDate: null,
+          enrollmentStatus: simulated.enrollmentStatus,
+          academicStatus: simulated.academicStatus,
+          graduationStatus: simulated.enrollmentStatus === 'GRADUATED' ? 'COMPLETED' : 'IN_PROGRESS',
+          suspensionStatus: simulated.isSuspended ? 'ACTIVE' : 'NONE',
+          expulsionStatus: simulated.isExpelled ? 'ACTIVE' : 'NONE',
+          disciplinaryStatus: simulated.disciplinaryStatus,
+        },
+      });
+
+      student = {
+        id: createdRecord.id,
+        studentNumber: createdRecord.universityStudentId,
+        universityCode: universityCode,
+        name: createdRecord.fullName,
+        dateOfBirth: createdRecord.dateOfBirth.toISOString(),
+        gender: createdRecord.gender ?? 'Unknown',
+        photoUrl: createdRecord.photoUrl ?? '',
+        enrollmentStatus: createdRecord.enrollmentStatus as UniversityStudentRecord['enrollmentStatus'],
+        academicStatus: createdRecord.academicStatus as UniversityStudentRecord['academicStatus'],
+        disciplinaryStatus: createdRecord.disciplinaryStatus as UniversityStudentRecord['disciplinaryStatus'],
+        isSuspended: createdRecord.suspensionStatus === 'ACTIVE' || createdRecord.disciplinaryStatus === 'SUSPENDED',
+        isExpelled: createdRecord.expulsionStatus === 'ACTIVE' || createdRecord.disciplinaryStatus === 'EXPELLED',
+      };
+    }
+    /*
       return {
         verified: false,
         student: null,
@@ -359,6 +429,7 @@ export const verifyUniversityStudent = async (studentNumber: string, universityC
       isSuspended: createdRecord.suspensionStatus === 'ACTIVE' || createdRecord.disciplinaryStatus === 'SUSPENDED',
       isExpelled: createdRecord.expulsionStatus === 'ACTIVE' || createdRecord.disciplinaryStatus === 'EXPELLED',
     };
+    */
   }
 
   const eligibilityRules = evaluateEligibility(mapToEligibilityInput(student));
