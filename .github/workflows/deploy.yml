@@ -33,7 +33,7 @@ jobs:
       - name: Build web app
         env:
           NEXT_PUBLIC_BASE_PATH: /AEMS-REPOSITORY
-          NEXT_PUBLIC_API_URL: https://kusf-aems-live.loca.lt/api/v1
+          NEXT_PUBLIC_API_URL: https://whereas-productivity-minds-ser.trycloudflare.com/api/v1
         run: npm run build:web
 
       - name: Upload artifact
