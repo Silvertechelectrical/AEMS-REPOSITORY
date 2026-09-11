@@ -97,7 +97,7 @@ const persistUniversityStudent = async (student: UniversityStudentRecord) => {
 };
 
 const querySupabaseStudent = async (studentNumber: string, universityCode: string) => {
-  if (!hasSupabase()) {
+  if (process.env.CI === 'true' || process.env.DISABLE_DATABASE === 'true' || !hasSupabase()) {
     return null;
   }
 
