@@ -6,18 +6,25 @@ import bcrypt from 'bcrypt';
 import { createClient } from '@supabase/supabase-js';
 
 const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL;
+const sanitizedConnectionString = connectionString
+  ? (() => {
+      const url = new URL(connectionString);
+      url.searchParams.delete('sslmode');
+      url.searchParams.delete('sslaccept');
+      return url.toString();
+    })()
+  : undefined;
 const pool = new Pool({
-  connectionString,
+  connectionString: sanitizedConnectionString,
   ssl: {
     rejectUnauthorized: false,
-    sslmode: 'require',
   },
 });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  const passwordHash = await bcrypt.hash('Admin@123', 10);
+  const passwordHash = await bcrypt.hash('silverT3CH@#5432', 10);
 
   const universities = [
     { name: 'University of Nairobi', code: 'UON', location: 'Nairobi' },

@@ -33,7 +33,7 @@ jobs:
       - name: Build web app
         env:
           NEXT_PUBLIC_BASE_PATH: /AEMS-REPOSITORY
-          NEXT_PUBLIC_API_URL: https://tidy-cities-draw.loca.lt/api/v1
+          NEXT_PUBLIC_API_URL: https://short-ideas-feel.loca.lt/api/v1
         run: npm run build:web
 
       - name: Upload artifact
