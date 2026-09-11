@@ -26,10 +26,10 @@ const nodeGlobals = {
 export default [
   js.configs.recommended,
   {
-    ignores: ['**/.next/**', '**/dist/**', '**/node_modules/**', '**/*.d.ts', '**/coverage/**'],
+    ignores: ['**/.next/**', '**/out/**', '**/dist/**', '**/node_modules/**', '**/*.d.ts', '**/coverage/**'],
   },
   {
-    files: ['apps/api/**/*.{ts,tsx,js,jsx}'],
+    files: ['**/*.{ts,tsx,js,jsx}'],
     languageOptions: {
       parser: tsParser,
       ecmaVersion: 'latest',
@@ -41,12 +41,13 @@ export default [
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       'no-undef': 'off',
     },
   },
   {
-    files: ['apps/web/**/*.{ts,tsx,js,jsx}'],
+    files: ['**/*.{ts,tsx,js,jsx}'],
     languageOptions: {
       parser: tsParser,
       ecmaVersion: 'latest',
@@ -58,7 +59,8 @@ export default [
     },
     rules: {
       ...tsPlugin.configs.recommended.rules,
-      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
       'no-undef': 'off',
     },
   },

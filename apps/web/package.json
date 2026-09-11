@@ -8,7 +8,7 @@
     "build:web": "next build",
     "vercel-build": "next build",
     "start": "next start",
-    "lint": "eslint ./app/**/*.{ts,tsx,js,jsx} ./lib/**/*.{ts,tsx,js,jsx} --config ../../eslint.config.mjs"
+    "lint": "eslint . --config ../../eslint.config.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.1",
