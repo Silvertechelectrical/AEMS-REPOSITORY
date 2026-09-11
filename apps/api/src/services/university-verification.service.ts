@@ -233,9 +233,12 @@ const mapToEligibilityInput = (student: UniversityStudentRecord) => ({
 
 export const verifyUniversityStudent = async (studentNumber: string, universityCode: string) => {
   let dbRecord: Awaited<ReturnType<typeof prisma.universityStudent.findFirst>> = null;
-  let databaseUnavailable = false;
+  let databaseUnavailable = process.env.DISABLE_DATABASE === 'true';
 
   try {
+    if (databaseUnavailable) {
+      throw new Error('Database disabled for this environment');
+    }
     dbRecord = await prisma.universityStudent.findFirst({
       where: { universityStudentId: studentNumber, university: { code: universityCode } },
       include: { university: true },
