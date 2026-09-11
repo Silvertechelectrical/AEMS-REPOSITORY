@@ -1,8 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { clearStoredAuth, getStoredUser, isAthleteLikeRole, isOfficerRole, type AppUser } from '../../lib/auth';
 import { getApiBaseUrl } from '../../lib/api';
+import { getSitePath } from '../../lib/routes';
 
 export default function DashboardPage() {
   const [user, setUser] = useState<AppUser | null>(null);
@@ -17,7 +19,7 @@ export default function DashboardPage() {
 
     const token = window.localStorage.getItem('kusf_token');
     if (!token) {
-      window.location.href = '/login';
+      window.location.href = getSitePath('/login');
       return;
     }
 
@@ -77,11 +79,11 @@ export default function DashboardPage() {
             </div>
             <div className="flex flex-wrap gap-3">
               {quickLinks.map((link) => (
-                <a key={link.href} href={link.href} className={`inline-flex rounded-2xl px-5 py-3 font-semibold text-slate-950 transition hover:opacity-90 ${link.tone}`}>
+                <Link key={link.href} href={link.href as never} className={`inline-flex rounded-2xl px-5 py-3 font-semibold text-slate-950 transition hover:opacity-90 ${link.tone}`}>
                   {link.label}
-                </a>
+                </Link>
               ))}
-              <button onClick={() => { clearStoredAuth(); window.location.href = '/login'; }} className="inline-flex rounded-2xl bg-rose-500 px-5 py-3 font-semibold text-white transition hover:bg-rose-400">
+              <button onClick={() => { clearStoredAuth(); window.location.href = getSitePath('/login'); }} className="inline-flex rounded-2xl bg-rose-500 px-5 py-3 font-semibold text-white transition hover:bg-rose-400">
                 Sign out
               </button>
             </div>
